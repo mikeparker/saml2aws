@@ -42,22 +42,10 @@ func Exec(execFlags *flags.LoginExecFlags, cmdline []string) error {
 		return nil
 	}
 
-	awsCreds, err := sharedCreds.Load()
+	awsCreds, err := loadOrLogin(account, sharedCreds, execFlags)
 	if err != nil {
-		return errors.Wrap(err, "error loading credentials")
-	}
-
-	if time.Until(awsCreds.Expires) < 0 {
-		return errors.New("error aws credentials have expired")
-	}
-
-	ok, err := checkToken(account.Profile)
-	if err != nil {
-		return errors.Wrap(err, "error validating token")
-	}
-
-	if !ok {
-		err = Login(execFlags)
+		return errors.Wrap(err,
+			fmt.Sprintf("error loading credentials for profile: %s", execFlags.ExecProfile))
 	}
 	if err != nil {
 		return errors.Wrap(err, "error logging in")
