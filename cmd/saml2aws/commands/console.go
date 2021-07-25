@@ -43,7 +43,7 @@ func Console(consoleFlags *flags.ConsoleFlags) error {
 		return nil
 	}
 
-	awsCreds, err := loadOrLogin(account, sharedCreds, consoleFlags)
+	awsCreds, err := loadOrLogin(account, sharedCreds, consoleFlags.LoginExecFlags)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("error loading credentials for profile: %s", consoleFlags.LoginExecFlags.ExecProfile))
@@ -65,13 +65,13 @@ func Console(consoleFlags *flags.ConsoleFlags) error {
 	return federatedLogin(awsCreds, consoleFlags)
 }
 
-func loadOrLogin(account *cfg.IDPAccount, sharedCreds *awsconfig.CredentialsProvider, execFlags *flags.ConsoleFlags) (*awsconfig.AWSCredentials, error) {
+func loadOrLogin(account *cfg.IDPAccount, sharedCreds *awsconfig.CredentialsProvider, execFlags *flags.LoginExecFlags) (*awsconfig.AWSCredentials, error) {
 
 	var err error
 
-	if execFlags.LoginExecFlags.Force {
+	if execFlags.Force {
 		log.Println("force login requested")
-		return loginRefreshCredentials(sharedCreds, execFlags.LoginExecFlags)
+		return loginRefreshCredentials(sharedCreds, execFlags)
 	}
 
 	awsCreds, err := sharedCreds.Load()
@@ -80,12 +80,12 @@ func loadOrLogin(account *cfg.IDPAccount, sharedCreds *awsconfig.CredentialsProv
 			return nil, errors.Wrap(err, "failed to load credentials")
 		}
 		log.Println("credentials not found triggering login")
-		return loginRefreshCredentials(sharedCreds, execFlags.LoginExecFlags)
+		return loginRefreshCredentials(sharedCreds, execFlags)
 	}
 
 	if time.Until(awsCreds.Expires) < 0 {
 		log.Println("expired credentials triggering login")
-		return loginRefreshCredentials(sharedCreds, execFlags.LoginExecFlags)
+		return loginRefreshCredentials(sharedCreds, execFlags)
 	}
 
 	ok, err := checkToken(account.Profile)
@@ -95,7 +95,7 @@ func loadOrLogin(account *cfg.IDPAccount, sharedCreds *awsconfig.CredentialsProv
 
 	if !ok {
 		log.Println("aws rejected credentials triggering login")
-		return loginRefreshCredentials(sharedCreds, execFlags.LoginExecFlags)
+		return loginRefreshCredentials(sharedCreds, execFlags)
 	}
 
 	return awsCreds, nil
